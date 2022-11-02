@@ -48,7 +48,15 @@ from pickup_fact;""").mappings().all()
         return self.executeRawSql("""select f.warehouse_key, w.name as warehouse_name, ROUND(count(distinct f.pick_up_order_key) *1.0/(select count(distinct pick_up_order_key) from pickup_fact),2) as order_pct
 from pickup_fact f left join warehouse_dim w 
 on f.warehouse_key = w.warehouse_key 
-group by f.warehouse_key, w.name;""").mappings().all() 
+group by f.warehouse_key, w.name;""").mappings().all()
+
+    def getOntimeRatePerMonth(self):
+        return self.executeRawSql("""select dd.month, 
+round(count(distinct case when (f.on_time_counter = '1' or f.early_counter = '1') then f.pick_up_order_key else null end) * 1.0 / count(distinct f.pick_up_order_key),2) as ontime_rate
+from pickup_fact f left join date_dim dd
+on f.pickup_date_key = dd.date_key
+where dd.year = 2022
+group by dd.month;""").mappings().all()
 
     def createModels(self):
             self.executeRawSql(

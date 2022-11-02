@@ -79,7 +79,11 @@ def getOrderPerWarehouse():
     ordersPerW = transform(ordersPerW)
     return ordersPerW
 
-
+@app.route('/ontimeratepermonth/', methods =['GET', 'POST'])
+def getOntimeRatePerMonth():
+    otr = models.getOntimeRatePerMonth()
+    otr = transform(otr)
+    return otr
 
 
 
