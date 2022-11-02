@@ -52,7 +52,7 @@ group by f.warehouse_key, w.name;""").mappings().all()
 
     def createModels(self):
             self.executeRawSql(
-            """CREATE TABLE pickup_fact(
+            """CREATE TABLE IF NOT EXISTS pickup_fact(
                 package_key	varchar	,
                 warehouse_key	varchar	,
                 pick_up_point_key	varchar	,
@@ -76,7 +76,7 @@ group by f.warehouse_key, w.name;""").mappings().all()
             """)
 
             self.executeRawSql(
-            """create table date_dim(
+            """create table IF NOT EXISTS date_dim(
                 date_key	varchar	,
                 dayofweek	int	,
                 day	int	,
@@ -87,7 +87,7 @@ group by f.warehouse_key, w.name;""").mappings().all()
             """)
 
             self.executeRawSql(
-                """create table driver_dim(
+                """create table IF NOT EXISTS driver_dim(
                     driver_key	varchar	,
                 driver_name	varchar	,
                 vehicle_type	varchar	,
@@ -97,7 +97,7 @@ group by f.warehouse_key, w.name;""").mappings().all()
                 """)
 
             self.executeRawSql(
-                """create table package_dim (
+                """create table IF NOT EXISTS package_dim (
                     package_key	varchar	,
                     length	float	,
                     width	float	,
@@ -106,7 +106,7 @@ group by f.warehouse_key, w.name;""").mappings().all()
                     PRIMARY KEY(package_key));
                 """)
             self.executeRawSql(
-                """create table pickup_point_dim(
+                """create table IF NOT EXISTS pickup_point_dim(
                     pick_up_point_key	varchar	,
                     seller_name	varchar	,
                     postal_code	varchar	,
@@ -114,13 +114,13 @@ group by f.warehouse_key, w.name;""").mappings().all()
                     PRIMARY KEY(pick_up_point_key));
                 """)
             self.executeRawSql(
-                """create table service_level_dim (
+                """create table IF NOT EXISTS service_level_dim (
                 service_level_key	varchar	,
                 service_level	varchar	,
                 PRIMARY KEY(service_level_key));
                 """)
             self.executeRawSql(
-                """create table time_dim (
+                """create table IF NOT EXISTS time_dim (
                 time_key	varchar	,
                 hour	int	,
                 minute	int	,
@@ -129,7 +129,7 @@ group by f.warehouse_key, w.name;""").mappings().all()
                 );
                 """)
             self.executeRawSql(
-                """create table warehouse_dim(
+                """create table IF NOT EXISTS warehouse_dim(
                 warehouse_key	varchar	,
                 name	varchar	,
                 location	varchar,
