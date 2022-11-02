@@ -15,7 +15,7 @@ def transform(RowMapping):
 
 @app.route('/')
 def index():
-    return 'main_page__11'  #render_template('index.html')
+    return 'main_page__123'  #render_template('index.html')
 
 @app.route('/dates/all', methods=['GET', 'POST'])
 def showDates():
