@@ -1,122 +1,89 @@
-from flask import request, session, redirect, url_for, render_template, flash
-
+from flask import Flask, render_template, request , session, redirect, url_for, flash, json, Response
 from . models import Models
-from . forms import AddReaderForm, SignUpForm, SignInForm
-
+#from . forms import getDriverForm
 from src import app
+
 
 models = Models()
 
+def transform(RowMapping):
+    output = []
+    for row in RowMapping:
+        output.append(dict(row))
+    return output
+
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return 'main_page'  #render_template('index.html')
+
+@app.route('/dates/all', methods=['GET', 'POST'])
+def showDates():
+    date = models.getAllDates()
+    date = transform(date)
+    return date #render_template('date.html', date=date)
 
 
-@app.route('/books')
-def show_books():
-    try:
-        if session['user_available']:
-            booksAndAssignments = models.getBooksAndAssignments()
-            return render_template('books.html', booksAndAssignments=booksAndAssignments)
-        flash('User is not Authenticated')
-        return redirect(url_for('index'))
-    except Exception as e:
-        flash(str(e))
+@app.route('/drivers/all', methods=['GET', 'POST'])
+def showDrivers():
+    driver = models.getAllDrivers()
+    driver = transform(driver)
+    return driver #render_template('driver.html', driver=driver)
 
 
-@app.route('/add', methods=['GET', 'POST'])
-def add_reader():
-    try:
-        if session['user_available']:
-            reader = AddReaderForm(request.form)
-            if request.method == 'POST':
-                models.addAssignment({"email": reader.email.data, "isbn": reader.isbn.data})
-                return redirect(url_for('show_books'))
-            return render_template('add.html', reader=reader)
-    except Exception as e:
-        flash(str(e))
-    flash('User is not Authenticated')
-    return redirect(url_for('index'))
+@app.route('/drivers/search/', methods=['GET', 'POST'])
+def getDriverByID():
+    if request.method == 'POST':  
+        driver_id = request.args.get('driver_id')
+        driver = models.getDriverByID(driver_id)
+        driver = transform(driver)
+        if len(driver) == 0:
+            return 'driver not found' #render_template('driver.html', driver=driver)
+        return driver #render_template('driver.html', driver=driver)
+    else: 
+        return 'no method:{}'.format(request.method)
+
+@app.route('/ontimerate/', methods =['GET', 'POST'])
+def getAvgOnTimeRate():
+    rate = models.getAvgOnTimeRate()
+    rate = transform(rate)
+    return rate 
+
+@app.route('/totalorders/', methods =['GET', 'POST'])
+def getTotalOrders():
+    ordercount = models.getTotalOrders()
+    ordercount = transform(ordercount)
+    return ordercount
+
+@app.route('/totalordervalue/', methods =['GET', 'POST'])
+def getTotalOrderValue():
+    ordervalue = models.getTotalOrderValue()
+    ordervalue = transform(ordervalue)
+    return ordervalue
+
+@app.route('/totalpickupdriver/', methods =['GET', 'POST'])
+def getTotalPickupDrivers():
+    drivercount = models.getTotalPickupDrivers()
+    drivercount = transform(drivercount)
+    return drivercount
+
+@app.route('/ordersbymonth/', methods =['GET', 'POST'])
+def getOrdersPerMonth():
+    ordersPerMonth = models.getOrdersPerMonth()
+    ordersPerMonth = transform(ordersPerMonth)
+    return ordersPerMonth
+
+@app.route('/orderpctbywarehouse/', methods =['GET', 'POST'])
+def getOrderPerWarehouse():
+    ordersPerW = models.getOrderPerWarehouse()
+    ordersPerW = transform(ordersPerW)
+    return ordersPerW
 
 
-@app.route('/delete/<email>/<isbn>', methods=('GET', 'POST'))
-def delete_book(isbn, email):
-    try:
-        models.deleteAssignment({"email": email, "isbn": isbn})
-        return redirect(url_for('show_books'))
-    except Exception as e:
-        flash(str(e))
-        return redirect(url_for('index'))
 
 
-@app.route('/update/<email>/<isbn>', methods=('GET', 'POST'))
-def update_book(isbn, email):
-    try:
-        br = models.getAssignment({"email": email, "isbn": isbn})
-        reader = AddReaderForm(request.form, obj=br)
-        if request.method == 'POST':
-            models.updateAssignment({"email": reader.email.data, "isbn": reader.isbn.data})
-            return redirect(url_for('show_books'))
-        return render_template('update.html', reader=reader)
-    except Exception as e:
-        flash(str(e))
-        return redirect(url_for('index'))
-
-
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    try:
-        signupform = SignUpForm(request.form)
-        if request.method == 'POST':
-            models.addProfessor({"email": signupform.email.data, "password": signupform.password.data})
-            return redirect(url_for('signin'))
-        return render_template('signup.html', signupform=signupform)
-    except Exception as e:
-        flash(str(e))
-        return redirect(url_for('index'))
-
-
-@app.route('/signin', methods=['GET', 'POST'])
-def signin():
-    try:
-        signinform = SignInForm(request.form)
-        if request.method == 'POST':
-            em = signinform.email.data
-            log = models.getProfessorByEmail(em)
-            if log.password == signinform.password.data:
-                session['current_user'] = em
-                session['user_available'] = True
-                return redirect(url_for('show_books'))
-            else:
-                flash('Cannot sign in')
-        return render_template('signin.html', signinform=signinform)
-    except Exception as e:
-        flash(str(e))
-        return redirect(url_for('index'))
-
-
-@app.route('/about_user')
-def about_user():
-    try:
-        if session['user_available']:
-            user = models.getProfessorByEmail(session['current_user'])
-            return render_template('about_user.html', user=user)
-        flash('You are not a Authenticated User')
-        return redirect(url_for('index'))
-    except Exception as e:
-        flash(str(e))
-        return redirect(url_for('index'))
-
-
-@app.route('/logout')
-def logout():
-    try:
-        session.clear()
-        session['user_available'] = False
-        return redirect(url_for('index'))
-    except Exception as e:
-        flash(str(e))
-        return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
+
+

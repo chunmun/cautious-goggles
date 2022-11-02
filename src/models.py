@@ -4,91 +4,134 @@ import os
 
 class Models:
     def __init__(self):
-        self.engine = create_engine(os.environ.get('DB_URL', 'postgresql://postgres:Zgjxjayw629@localhost:5432/BT5110_SimpApp'))
-
+        self.engine = create_engine(os.environ.get('DB_URL', 'postgresql://postgres:Zgjxjayw629@localhost:5432/test_starapp'))
     def executeRawSql(self, statement, params={}):
         out = None
         with self.engine.connect() as con:
             out = con.execute(text(statement), params)
         return out
 
-    def addProfessor(self, value):
-        return self.executeRawSql("""INSERT INTO professor (email, password) VALUES(:email, :password);""", value)
-
-    def addBook(self, value):
-        # value has the form { "isbn": 2, "title": "The Silmarillion", "author": "Tolkien" }
-        return self.executeRawSql("""INSERT INTO book(isbn, title, author) VALUES(:isbn, :title, :author);""", value)
-
-    def updateAssignment(self, value):
-        return self.executeRawSql("""UPDATE assignment SET email=:email WHERE isbn=:isbn;""", value)
+    def getAllDates(self):
+        return self.executeRawSql("SELECT * FROM date_dim;").mappings().all() 
+        
+    def getAllDrivers(self):
+        return self.executeRawSql("SELECT * FROM driver_dim;").mappings().all() #what does mappings().all do?
     
-    def addAssignment(self, value):
-        return self.executeRawSql("""INSERT INTO assignment(email, isbn) VALUES(:email, :isbn);""", value)
+    def getDriverByID(self, id):
+        values = self.executeRawSql("""SELECT * FROM driver_dim WHERE driver_key=:id;""", {"id": id}).mappings().all()
+        return values 
+    
+    def getAvgOnTimeRate (self):
+        return self.executeRawSql("""select round(count(distinct case when (on_time_counter ='1' or early_counter = '1') then pick_up_order_key else null end) * 1.0/ count(distinct pick_up_order_key ),2 )as pickup_ontime_rate
+from pickup_fact;""").mappings().all() 
 
-    def getAllAssignments(self):
-        return self.executeRawSql("SELECT * FROM assignment;").mappings().all()
+    def getTotalOrders(self):
+        return self.executeRawSql("""select count(distinct pick_up_order_key)  as total_order
+from pickup_fact;""").mappings().all() 
 
-    def deleteAssignment(self, value):
-        return self.executeRawSql("DELETE FROM assignment where email=:email and isbn=:isbn;", value)
+    def getTotalOrderValue(self):
+        return self.executeRawSql("""select sum(ordervalue) as total_order_value
+from pickup_fact;""").mappings().all() 
 
-    def getAssignment(self, value):
-        values = self.executeRawSql("""SELECT * FROM assignment WHERE email=:email and isbn=:isbn;""", value).mappings().all()
-        if len(values) == 0:
-            raise Exception("Book {} has not been assignment by {}".format(value["isbn"], value["email"]))
-        return values[0]
+    def getTotalPickupDrivers(self):
+        return self.executeRawSql("""select count(distinct driver_key) as total_pickup_driver
+from pickup_fact;""").mappings().all() 
 
-    def getAllBooks(self):
-        return self.executeRawSql("SELECT * FROM book;").mappings().all()
+    def getOrdersPerMonth(self):
+        return self.executeRawSql("""select dd.month, count(distinct pick_up_order_key) as order_count
+    from pickup_fact f left join date_dim dd 
+    on f.pickup_date_key = dd.date_key
+    where dd.year = 2022
+    group by dd.month;""").mappings().all() 
 
-    def getAllUsers(self):
-        return self.executeRawSql("SELECT * FROM student;").mappings().all()
-
-    def getBooksAndAssignments(self):
-        return self.executeRawSql("SELECT book.isbn, email, title, author FROM book LEFT JOIN assignment ON book.isbn = assignment.isbn;").mappings().all()
-
-    def getProfessorByEmail(self, email):
-        values = self.executeRawSql("""SELECT * FROM professor WHERE email=:email;""", {"email": email}).mappings().all()
-        if len(values) == 0:
-            raise Exception("Professor {} does not exist".format(email))
-        return values[0]
-
-    def getStudentByEmail(self, email):
-        values = self.executeRawSql("""SELECT * FROM student WHERE email=:email;""", {"email": email}).mappings().all()
-        if len(values) == 0:
-            raise Exception("Student {} does not exist".format(email))
-        return values[0]
+    def getOrderPerWarehouse (self):
+        return self.executeRawSql("""select f.warehouse_key, w.name as warehouse_name, ROUND(count(distinct f.pick_up_order_key) *1.0/(select count(distinct pick_up_order_key) from pickup_fact),2) as order_pct
+from pickup_fact f left join warehouse_dim w 
+on f.warehouse_key = w.warehouse_key 
+group by f.warehouse_key, w.name;""").mappings().all() 
 
     def createModels(self):
-        self.executeRawSql(
-        """CREATE TABLE IF NOT EXISTS student (
-            email TEXT PRIMARY KEY
-        );
-        """)
-
-        self.executeRawSql(
-        """CREATE TABLE IF NOT EXISTS professor (
-            email TEXT PRIMARY KEY,
-            password TEXT NOT NULL
-        );
-        """)
-
-        self.executeRawSql(
-            """CREATE TABLE IF NOT EXISTS book (
-                isbn TEXT PRIMARY KEY,
-                title TEXT NOT NULL,
-                author TEXT NOT NULL
-            );
+            self.executeRawSql(
+            """CREATE TABLE pickup_fact(
+                package_key	varchar	,
+                warehouse_key	varchar	,
+                pick_up_point_key	varchar	,
+                driver_key	varchar	,
+                late_counter	varchar	,
+                early_counter	varchar	,
+                on_time_counter	varchar	,
+                one_day_late_counter	varchar	,
+                two_day_late_counter	varchar	,
+                three_day_late_counter	varchar	,
+                ordervalue	int	,
+                orderweight	float	,
+                pick_up_order_key	varchar	,
+                service_level_key	varchar	,
+                ex_date_key	varchar	,
+                pickup_date_key	varchar	,
+                pickup_time_key	varchar	,
+                ex_time_key	varchar	,
+                PRIMARY KEY(pick_up_order_key)
+                );
             """)
 
-        self.executeRawSql(
-            """CREATE TABLE IF NOT EXISTS assignment (
-                email TEXT REFERENCES student(email),
-                isbn TEXT REFERENCES book(isbn),
-                PRIMARY KEY (isbn, email)
-            );
+            self.executeRawSql(
+            """create table date_dim(
+                date_key	varchar	,
+                dayofweek	int	,
+                day	int	,
+                month	int	,
+                year	int	,
+                weekend	int	,
+                PRIMARY KEY (date_key));
             """)
-# data = ( { "id": 1, "title": "The Hobbit", "primary_author": "Tolkien" },
-    #              { "id": 2, "title": "The Silmarillion", "primary_author": "Tolkien" },
-    #     )
 
-    # statement = text("""INSERT INTO book(id, title, primary_author) VALUES(:id, :title, :primary_author)""")
+            self.executeRawSql(
+                """create table driver_dim(
+                    driver_key	varchar	,
+                driver_name	varchar	,
+                vehicle_type	varchar	,
+                    PRIMARY KEY(driver_key)
+                );
+
+                """)
+
+            self.executeRawSql(
+                """create table package_dim (
+                    package_key	varchar	,
+                    length	float	,
+                    width	float	,
+                    height	float	,
+                    size	varchar	,
+                    PRIMARY KEY(package_key));
+                """)
+            self.executeRawSql(
+                """create table pickup_point_dim(
+                    pick_up_point_key	varchar	,
+                    seller_name	varchar	,
+                    postal_code	varchar	,
+                    location	varchar	,
+                    PRIMARY KEY(pick_up_point_key));
+                """)
+            self.executeRawSql(
+                """create table service_level_dim (
+                service_level_key	varchar	,
+                service_level	varchar	,
+                PRIMARY KEY(service_level_key));
+                """)
+            self.executeRawSql(
+                """create table time_dim (
+                time_key	varchar	,
+                hour	int	,
+                minute	int	,
+                session	varchar	,
+                    PRIMARY KEY(time_key)
+                );
+                """)
+            self.executeRawSql(
+                """create table warehouse_dim(
+                warehouse_key	varchar	,
+                name	varchar	,
+                location	varchar,
+                PRIMARY KEY(warehouse_key));
+                """)
