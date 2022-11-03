@@ -14,3 +14,4 @@ A sandbox application with Flask, SQLAlchemy and PostgreSQL
 - Flask
 - Flask-SQLAlchemy
 - flask-WTF
+# starapp
