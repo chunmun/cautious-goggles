@@ -4,54 +4,57 @@ import os
 
 class Models:
     def __init__(self):
-        self.engine = create_engine(os.environ.get('DB_URL', 'postgresql://postgres:Zgjxjayw629@localhost:5432/starapp'))
+        self.engine = create_engine(os.environ.get('DB_URL', 'postgresql://calvin:qwerty1@localhost:5432/calvin'))
     def executeRawSql(self, statement, params={}):
         out = None
         with self.engine.connect() as con:
             out = con.execute(text(statement), params)
         return out
 
-    def getAllDates(self):
-        return self.executeRawSql("SELECT * FROM date_dim;").mappings().all() 
-        
+    def getAllPackages(self):
+        return self.executeRawSql("SELECT * FROM package_dim;").mappings().all()
+
     def getAllDrivers(self):
         return self.executeRawSql("SELECT * FROM driver_dim;").mappings().all() #what does mappings().all do?
-    
+
+    def getAllPickups(self):
+        return self.executeRawSql("SELECT * FROM pickup_fact;").mappings().all() #what does mappings().all do?
+
     def getDriverByID(self, id):
         values = self.executeRawSql("""SELECT * FROM driver_dim WHERE driver_key=:id;""", {"id": id}).mappings().all()
-        return values 
-    
+        return values
+
     def getAvgOnTimeRate (self):
         return self.executeRawSql("""select round(count(distinct case when (on_time_counter ='1' or early_counter = '1') then pick_up_order_key else null end) * 1.0/ count(distinct pick_up_order_key ),2 )as pickup_ontime_rate
-from pickup_fact;""").mappings().all() 
+from pickup_fact;""").mappings().all()
 
     def getTotalOrders(self):
         return self.executeRawSql("""select count(distinct pick_up_order_key)  as total_order
-from pickup_fact;""").mappings().all() 
+from pickup_fact;""").mappings().all()
 
     def getTotalOrderValue(self):
         return self.executeRawSql("""select sum(ordervalue) as total_order_value
-from pickup_fact;""").mappings().all() 
+from pickup_fact;""").mappings().all()
 
     def getTotalPickupDrivers(self):
         return self.executeRawSql("""select count(distinct driver_key) as total_pickup_driver
-from pickup_fact;""").mappings().all() 
+from pickup_fact;""").mappings().all()
 
     def getOrdersPerMonth(self):
         return self.executeRawSql("""select dd.month, count(distinct pick_up_order_key) as order_count
-    from pickup_fact f left join date_dim dd 
+    from pickup_fact f left join date_dim dd
     on f.pickup_date_key = dd.date_key
     where dd.year = 2022
-    group by dd.month;""").mappings().all() 
+    group by dd.month;""").mappings().all()
 
     def getOrderPerWarehouse (self):
         return self.executeRawSql("""select f.warehouse_key, w.name as warehouse_name, ROUND(count(distinct f.pick_up_order_key) *1.0/(select count(distinct pick_up_order_key) from pickup_fact),2) as order_pct
-from pickup_fact f left join warehouse_dim w 
-on f.warehouse_key = w.warehouse_key 
+from pickup_fact f left join warehouse_dim w
+on f.warehouse_key = w.warehouse_key
 group by f.warehouse_key, w.name;""").mappings().all()
 
     def getOntimeRatePerMonth(self):
-        return self.executeRawSql("""select dd.month, 
+        return self.executeRawSql("""select dd.month,
 round(count(distinct case when (f.on_time_counter = '1' or f.early_counter = '1') then f.pick_up_order_key else null end) * 1.0 / count(distinct f.pick_up_order_key),2) as ontime_rate
 from pickup_fact f left join date_dim dd
 on f.pickup_date_key = dd.date_key
