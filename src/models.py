@@ -4,7 +4,7 @@ import os
 
 class Models:
     def __init__(self):
-        self.engine = create_engine(os.environ.get('DB_URL', 'postgresql://calvin:qwerty1@localhost:5432/calvin'))
+        self.engine = create_engine(os.environ.get('DB_URL', 'postgresql://testusr:password@postgres/test'))
     def executeRawSql(self, statement, params={}):
         out = None
         with self.engine.connect() as con:
